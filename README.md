@@ -1,0 +1,130 @@
+# 微信 Agent 任务插件
+
+独立的 AstrBot 任务插件，提供 Thread/Ticket、证据审核、单次订阅、无工具模型 Worker 和后台任务工作台。
+不注册微信平台、不连接 Hook HTTP 服务、不修改采集配置。
+
+**当前仅生成候选和草稿，不发送微信。** 页面和 Worker 需要同时安装
+[微信 Hook 连接插件](https://github.com/abincn/astrbot_plugin_wechat_hook) v0.2.0 及以上。
+本地 CLI 可以单独管理已有 Inbox，不需要加载 AstrBot 或连接插件。
+
+## 安装
+
+在独立 AstrBot 的插件管理中，通过仓库地址安装：
+
+```text
+https://github.com/abincn/astrbot_plugin_wechat_agents
+```
+
+也可 **Code → Download ZIP**，解压后将插件目录命名为 `astrbot_plugin_wechat_agents`，
+放入 `data/plugins/`。`main.py` 和 `metadata.yaml` 必须直接位于该目录下。
+保留 `views/` 和 `.astrbot-plugin/`。本插件无额外 Python 依赖，使用 AstrBot 自带接口。
+后台需支持插件视图、`AstrBotPluginView` bridge 和 `astrbot.api.web`；接线参考 AstrBot 4.29.4 对应的已审阅 API。
+
+从旧合并版升级时，先将旧连接插件目录移到 `plugins` 目录之外，再重新安装独立连接插件和本插件，
+避免旧工作台文件残留。已有 Inbox、平台 ID、grant、任务配置与 `WGA_SUPERAGENT_*` 环境变量沿用，不迁移数据库。
+
+## 配置任务工作区
+
+先启动连接插件，确认独立 Inbox 已存在。然后在 AstrBot 的 `data/wga-superagent.json` 保存：
+
+```json
+{
+  "platform_id": "wechat_pc_hook",
+  "inbox_db": "wechat_hook_inbox.sqlite3",
+  "grant_file": "wga-superagent-grants.json",
+  "owner": "YOUR_WXID",
+  "rooms": ["YOUR_ROOM@chatroom"],
+  "provider_id": "YOUR_PROVIDER_ID",
+  "run_ticket_worker": false,
+  "run_subscription_worker": false
+}
+```
+
+路径相对于这份配置文件。数据库和账户必须与所选连接平台一致；群必须属于连接平台白名单，
+平台保持 `send_enabled=false`。两个 Worker 默认关闭，避免仅安装插件就自动调用模型。
+要处理排队 Ticket 或到期订阅，分别把对应标志改为 `true`，并配置下面的凭据。
+
+### 凭据与权限
+
+在 AstrBot 工作目录运行三次，分别生成操作者、Ticket Worker、订阅 Worker 的独立凭据：
+
+```powershell
+python -m data.plugins.astrbot_plugin_wechat_agents.task_cli --generate-credential
+```
+
+输出 `bearer_token` 和 `token_sha256`。明文凭据仅保存到私有位置，grant 文件只保存哈希。
+`data/wga-superagent-grants.json` 是 JSON 数组；每项格式如下，占位内容必须替换：
+
+```json
+[
+  {
+    "token_sha256": "REPLACE_WITH_GENERATED_SHA256",
+    "subject": "operator",
+    "owner": "YOUR_WXID",
+    "rooms": ["YOUR_ROOM@chatroom"],
+    "capabilities": [
+      "thread:create", "thread:read", "thread:complete",
+      "ticket:create", "ticket:read", "ticket:review", "ticket:retry",
+      "subscription:manage", "subscription:read", "audit:read"
+    ]
+  }
+]
+```
+
+启用 Worker 时在同一数组中再添加两个 grant，字段相同、哈希和 subject 不同：
+
+- Ticket Worker：只授予 `ticket:dispatch`。
+- 订阅 Worker：只授予 `subscription:dispatch`。
+
+每个 Worker grant 必须覆盖配置中的全部群。根据需要为审核者单独生成凭据；
+现有审核规则要求独立证据，但不强制不同的人审核。
+
+在启动独立 AstrBot 的同一个 PowerShell 窗口中设置：
+
+```powershell
+$env:WGA_SUPERAGENT_CONFIG = 'C:\YourAstrBot\data\wga-superagent.json'
+$env:WGA_SUPERAGENT_TICKET_TOKEN = '<ticket-worker-bearer>'
+$env:WGA_SUPERAGENT_SCHEDULER_TOKEN = '<scheduler-bearer>'
+```
+
+只有启用相应 Worker 才需要其明文变量。Ticket Worker 还需要 AstrBot 中已配置的模型提供方 ID。
+完整重启独立 AstrBot 后，Worker 在平台加载完成时绑定。配置缺失不启动任何 Worker。
+
+## 后台使用
+
+入口：**插件 → 微信 Agent 任务 → 可视化视图 → 微信任务工作台**。
+
+1. 输入操作者凭据连接，选择授权群。
+2. “消息建单”：选中已有文本消息，填写本次处理目标。
+3. “任务与审核”：添加具体任务，由已启用的 Worker 处理；手动刷新查看状态。
+4. 选中任务查看候选，添加并人工核对证据，然后审核通过。
+5. 点击“保存为草稿”，返回草稿编号；不会发送微信。
+6. 在目标详情中可安排一次性跟进，在“定时跟进”中暂停、恢复或取消。
+
+页面凭据只留在当前页面内存，刷新或断开后需重填。Dashboard 登录不代替原有账户/群/能力鉴权。
+原始消息和模型结果按纯文本展示，不作为 HTML 执行。Worker 不使用工具、MCP、Hermes 或任意命令。
+
+## 本地控制
+
+在单独的操作者终端中设置 `WGA_SUPERAGENT_OPERATOR_TOKEN`，用 JSON 标准输入调用：
+
+```powershell
+'{"action":"list_review_tickets","owner":"YOUR_WXID","room":"YOUR_ROOM@chatroom"}' |
+  python -m data.plugins.astrbot_plugin_wechat_agents.task_cli --config data/wga-superagent.json
+```
+
+只提供人工控制操作，不暴露直接领取、旧版无证据审核或全库恢复。
+更多界面操作与展示限制见 [工作台说明](docs/TASK_UI.md)。
+
+## 打包与限制
+
+**Actions → Build plugin package** 提供安装 ZIP；也可在仓库根目录运行
+`python tools/package_plugin.py`，输出 `dist/astrbot_plugin_wechat_agents.zip`。
+构建清单不含凭据、数据库或缓存。
+
+禁用 Agent 插件会停止其 Worker，连接插件继续接收消息和记录普通回复草稿。
+停止连接平台也会停止其绑定 Worker；平台重载后需完整重启独立实例来重绑。
+崩溃任务不自动重跑，恢复仍需确认旧 Worker 已退出后人工处理。
+
+迁移仅做语法检查、静态核对和 ZIP 构建，未编写测试代码或运行本地测试，未部署到生产或连接真实微信/模型。
+界面/启停/升级尚需实机验收；无 Worker 心跳、全库搜索、真实发送回执或多代理执行。
