@@ -11,10 +11,11 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
 from .control_auth import new_operator_credential
 from .task_config import (
-    CONFIG_ENV, OPERATOR_TOKEN_ENV, load_config, open_control,
+    CONFIG_ENV, OPERATOR_TOKEN_ENV, load_config, load_group_settings, open_control,
 )
 
 
@@ -34,6 +35,10 @@ def main() -> int:
         description="Authenticated local Thread/Ticket/Subscription control"
     )
     parser.add_argument("--config", default=os.environ.get(CONFIG_ENV))
+    parser.add_argument(
+        "--plugin-config",
+        help="Agent plugin config; defaults to config/astrbot_plugin_wechat_agents_config.json next to task config",
+    )
     parser.add_argument(
         "--generate-credential", action="store_true",
         help="Print a new bearer token and its hash for a local grant file",
@@ -59,7 +64,10 @@ def main() -> int:
     operation = action.pop("action", None)
     if operation not in OPERATIONS:
         parser.error("Unknown or disallowed action")
-    config = load_config(args.config)
+    plugin_config = (Path(args.plugin_config) if args.plugin_config else
+                     Path(args.config).expanduser().resolve().parent / "config" /
+                     "astrbot_plugin_wechat_agents_config.json")
+    config = load_config(args.config, group_settings=load_group_settings(plugin_config))
     if action.get("owner") != config["owner"] or action.get("room") not in config["rooms"]:
         parser.error("Action scope is not in the configured account/group allowlist")
 

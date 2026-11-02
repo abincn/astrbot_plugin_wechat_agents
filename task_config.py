@@ -20,7 +20,37 @@ SCHEDULER_TOKEN_ENV = "WGA_SUPERAGENT_SCHEDULER_TOKEN"
 OPERATOR_TOKEN_ENV = "WGA_SUPERAGENT_OPERATOR_TOKEN"
 
 
-def load_config(path: str | Path) -> dict:
+def normalize_group_settings(settings: dict) -> dict:
+    """The Agent plugin config is the only authority for managed groups."""
+    platform_id = settings.get("platform_id", "wechat_pc_hook")
+    if not isinstance(platform_id, str) or not platform_id.strip():
+        raise ValueError("Agent platform_id must be non-empty text")
+    rooms = settings.get("rooms", [])
+    if not isinstance(rooms, list) or len(rooms) > 50:
+        raise ValueError("Agent rooms must be a list of at most 50 group IDs")
+    normalized = []
+    for room in rooms:
+        if not isinstance(room, str):
+            raise ValueError("Agent room must be text")
+        room = room.strip()
+        group_session("scope", room)
+        if room in normalized:
+            raise ValueError("Duplicate Agent room")
+        normalized.append(room)
+    return {"platform_id": platform_id.strip(), "rooms": normalized}
+
+
+def load_group_settings(path: str | Path) -> dict:
+    location = Path(path).expanduser()
+    if location.stat().st_size > 65536:
+        raise ValueError("Agent plugin config must be at most 64 KiB")
+    settings = json.loads(location.read_text(encoding="utf-8"))
+    if not isinstance(settings, dict):
+        raise ValueError("Agent plugin config must be an object")
+    return normalize_group_settings(settings)
+
+
+def load_config(path: str | Path, *, group_settings: dict) -> dict:
     """Read one bounded, local configuration shared by workers and control CLI."""
     config_path = Path(path).expanduser().resolve(strict=True)
     if config_path.stat().st_size > 8192:
@@ -34,6 +64,8 @@ def load_config(path: str | Path) -> dict:
     }
     if set(config) - expected:
         raise ValueError("Unknown Super-Agent config fields")
+    # Legacy rooms/platform_id in this file are ignored, never a fallback.
+    config.update(normalize_group_settings(group_settings))
     for key in ("inbox_db", "grant_file", "owner"):
         if not isinstance(config.get(key), str) or not config[key].strip():
             raise ValueError(f"Missing Super-Agent config field: {key}")
@@ -85,12 +117,11 @@ def resolve_task_platform(context, config: dict):
             or not callable(getattr(platform, "get_task_scope", None))
             or not callable(getattr(platform, "attach_task_runtime", None))
             or not callable(getattr(platform, "detach_task_runtime", None))):
-        raise ValueError("Install and enable the WeChat Hook connector v0.2 or later")
+        raise ValueError("Install and enable the WeChat Hook connector v0.3 or later")
     scope = platform.get_task_scope()
-    if scope.get("version") != 1 or scope.get("draft_only") is not True:
+    if scope.get("version") != 2 or scope.get("draft_only") is not True:
         raise ValueError("Task control requires a live draft-only adapter")
     if (scope["owner"] != config["owner"]
-            or not set(config["rooms"]).issubset(scope["rooms"])
             or Path(config["inbox_db"]).resolve() != Path(scope["inbox_db"]).resolve()):
-        raise ValueError("Task database/account/groups must match the adapter")
+        raise ValueError("Task database/account must match the adapter")
     return platform

@@ -44,11 +44,13 @@ class TaskRuntime:
             raise
 
     @classmethod
-    def from_environment(cls, context) -> "TaskRuntime | None":
+    def from_environment(cls, context, group_settings: dict) -> "TaskRuntime | None":
+        if not group_settings["rooms"]:
+            return None
         path = os.environ.get(CONFIG_ENV)
         if not path:
             return None
-        config = load_config(path)
+        config = load_config(path, group_settings=group_settings)
         if not config.get("run_ticket_worker") and not config.get(
             "run_subscription_worker"
         ):

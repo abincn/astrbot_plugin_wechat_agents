@@ -12,8 +12,9 @@
 
 1. 按 [独立插件安装说明](../README.md#安装)，将 `astrbot_plugin_wechat_hook` 和
    `astrbot_plugin_wechat_agents` 分别安装到独立 AstrBot 的 `data/plugins/`。视图与 `.astrbot-plugin/` 属于 Agent 插件。
-2. 沿用 [任务配置说明](../README.md#配置任务工作区)，设置 `WGA_SUPERAGENT_CONFIG`、
-   独立 Inbox、grant 文件、账户和群白名单。保持平台 `send_enabled=false`。
+2. 先在 **插件 → 微信 Agent 任务 → 配置** 填写平台 ID 和 `rooms` 群名单，再按
+   [任务配置说明](../README.md#配置任务工作区) 设置 `WGA_SUPERAGENT_CONFIG`、独立 Inbox、grant 和账户。
+   Hook 不配置群名单；任务文件里的旧名单不再生效。保持平台 `send_enabled=false`。
 3. 完整重启独立 AstrBot，再打开上述插件视图。输入已有操作者的明文凭据，点击“连接工作区”。
    Dashboard 登录不会代替账户/群能力授权；页面只显示该凭据与配置共同允许的群。
    凭据仅保留在当前页面内存，通过 bridge 的 POST 请求传递；不放入 URL、本地存储或日志。

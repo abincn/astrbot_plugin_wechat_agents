@@ -1,0 +1,13 @@
+{
+  "platform_id": {
+    "description": "使用的微信连接平台 ID",
+    "type": "string",
+    "default": "wechat_pc_hook"
+  },
+  "rooms": {
+    "description": "启用群 Agent 的群 ID",
+    "type": "list",
+    "default": [],
+    "hint": "每项填写一个完整群 ID，结尾为 @chatroom。空列表表示不启用任何群 Agent。名单外继续遵循 AstrBot 自身的回复设置。保存后完整重启独立实例。"
+  }
+}

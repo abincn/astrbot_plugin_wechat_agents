@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_NAME = "astrbot_plugin_wechat_agents"
 FILES = [
     "__init__.py",
+    "_conf_schema.json",
+    "workspace.py",
     "control_auth.py",
     "control_subscriptions.py",
     "control_tasks.py",

@@ -4,7 +4,7 @@
 不注册微信平台、不连接 Hook HTTP 服务、不修改采集配置。
 
 **当前仅生成候选和草稿，不发送微信。** 页面和 Worker 需要同时安装
-[微信 Hook 连接插件](https://github.com/abincn/astrbot_plugin_wechat_hook) v0.2.0 及以上。
+[微信 Hook 连接插件](https://github.com/abincn/astrbot_plugin_wechat_hook) v0.3.0 及以上。
 本地 CLI 可以单独管理已有 Inbox，不需要加载 AstrBot 或连接插件。
 
 ## 安装
@@ -25,22 +25,30 @@ https://github.com/abincn/astrbot_plugin_wechat_agents
 
 ## 配置任务工作区
 
+先在 **AstrBot 后台 → 插件 → 微信 Agent 任务 → 配置** 填写：
+
+- `platform_id`：所用微信连接平台的 ID，默认 `wechat_pc_hook`。
+- `rooms`：启用群 Agent 的群 ID 列表，每项一个完整的 `群ID@chatroom`。
+
+这是群 Agent 的唯一启用名单，默认空列表表示不启用任何群 Agent；字符串不会被当作数组接受。
+名单内应用按群文档、空工具策略，并允许在授权范围内管理任务；名单外不应用 Agent 策略，仍按 AstrBot 原生规则处理。
+保存后完整重启独立实例，以一致更新页面、群策略和 Worker。
+仅使用按群指令策略不需要开启任务 Worker；任务工作台另需下述数据库/授权配置。
+
 先启动连接插件，确认独立 Inbox 已存在。然后在 AstrBot 的 `data/wga-superagent.json` 保存：
 
 ```json
 {
-  "platform_id": "wechat_pc_hook",
   "inbox_db": "wechat_hook_inbox.sqlite3",
   "grant_file": "wga-superagent-grants.json",
   "owner": "YOUR_WXID",
-  "rooms": ["YOUR_ROOM@chatroom"],
   "provider_id": "YOUR_PROVIDER_ID",
   "run_ticket_worker": false,
   "run_subscription_worker": false
 }
 ```
 
-路径相对于这份配置文件。数据库和账户必须与所选连接平台一致；群必须属于连接平台白名单，
+路径相对于这份配置文件。数据库和账户必须与所选连接平台一致；群名单和平台 ID 从 Agent 原生配置读取，
 平台保持 `send_enabled=false`。两个 Worker 默认关闭，避免仅安装插件就自动调用模型。
 要处理排队 Ticket 或到期订阅，分别把对应标志改为 `true`，并配置下面的凭据。
 
@@ -76,7 +84,8 @@ python -m data.plugins.astrbot_plugin_wechat_agents.task_cli --generate-credenti
 - Ticket Worker：只授予 `ticket:dispatch`。
 - 订阅 Worker：只授予 `subscription:dispatch`。
 
-每个 Worker grant 必须覆盖配置中的全部群。根据需要为审核者单独生成凭据；
+每个 Worker grant 必须覆盖 Agent 原生配置中的全部群。grant 的 `rooms` 仅限制该凭据权限，不是第二份群启用名单。
+根据需要为审核者单独生成凭据；
 现有审核规则要求独立证据，但不强制不同的人审核。
 
 在启动独立 AstrBot 的同一个 PowerShell 窗口中设置：
@@ -114,7 +123,16 @@ $env:WGA_SUPERAGENT_SCHEDULER_TOKEN = '<scheduler-bearer>'
 ```
 
 只提供人工控制操作，不暴露直接领取、旧版无证据审核或全库恢复。
+CLI 也读取 Agent 原生配置，默认文件为任务配置同级的
+`config/astrbot_plugin_wechat_agents_config.json`。任务配置不在 AstrBot 的 data 目录时，
+用 `--plugin-config` 指定这份配置文件；没有配置时不会退回旧文件名单。
 更多界面操作与展示限制见 [工作台说明](docs/TASK_UI.md)。
+
+### v0.2.0 升级
+
+同时更新两个插件，再把原群 ID 列表填入 Agent 原生配置的 `rooms`。旧任务 JSON 中的 `rooms` 和 `platform_id`
+可删除；保留时也会被忽略，不会覆盖原生插件配置。现有 Inbox、grant、任务记录和按群文档目录不移动。
+连接器不再读取按群文档，Agent 沿用 `data/wechat_hook_workspaces/` 下的原命名空间。
 
 ## 打包与限制
 
@@ -126,5 +144,5 @@ $env:WGA_SUPERAGENT_SCHEDULER_TOKEN = '<scheduler-bearer>'
 停止连接平台也会停止其绑定 Worker；平台重载后需完整重启独立实例来重绑。
 崩溃任务不自动重跑，恢复仍需确认旧 Worker 已退出后人工处理。
 
-迁移仅做语法检查、静态核对和 ZIP 构建，未编写测试代码或运行本地测试，未部署到生产或连接真实微信/模型。
+v0.3.0 仅做语法检查、静态核对和 ZIP 构建，未编写测试代码或运行本地测试，未部署到生产或连接真实微信/模型。
 界面/启停/升级尚需实机验收；无 Worker 心跳、全库搜索、真实发送回执或多代理执行。

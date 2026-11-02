@@ -20,8 +20,9 @@ PLUGIN_NAME = "astrbot_plugin_wechat_agents"
 
 
 class TaskPanel:
-    def __init__(self, context):
+    def __init__(self, context, group_settings: dict):
         self.context = context
+        self.group_settings = group_settings
         self.active = True
         context.register_web_api(
             f"/{PLUGIN_NAME}/tasks", self.handle, ["POST"], "微信任务工作台",
@@ -31,6 +32,8 @@ class TaskPanel:
         # AstrBot's extension route authenticates the Dashboard session first.
         if not self.active or not request.username:
             return error_response("请登录 AstrBot 并启用微信 Agent 任务插件。", status_code=403)
+        if not self.group_settings["rooms"]:
+            return error_response("请先在“微信 Agent 任务 → 配置”中添加群 ID，保存后重启。", status_code=503)
         path = os.environ.get(CONFIG_ENV)
         if not path:
             return error_response("尚未配置独立实例的任务配置文件。", status_code=503)
@@ -41,7 +44,7 @@ class TaskPanel:
             payload = json.loads(raw)
             if not isinstance(payload, dict):
                 raise ValueError("Expected an object")
-            config = load_config(path)
+            config = load_config(path, group_settings=self.group_settings)
             # Resolve on the event loop, then do SQLite work off it.
             resolve_task_platform(self.context, config)
             data = await asyncio.to_thread(self._execute, config, payload)
