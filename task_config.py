@@ -37,7 +37,13 @@ def normalize_group_settings(settings: dict) -> dict:
         if room in normalized:
             raise ValueError("Duplicate Agent room")
         normalized.append(room)
-    return {"platform_id": platform_id.strip(), "rooms": normalized}
+    result = {"platform_id": platform_id.strip(), "rooms": normalized}
+    for flag in ("run_ticket_worker", "run_subscription_worker"):
+        value = settings.get(flag, False)
+        if type(value) is not bool:
+            raise ValueError(f"{flag} must be a boolean switch")
+        result[flag] = value
+    return result
 
 
 def load_group_settings(path: str | Path) -> dict:
@@ -64,7 +70,7 @@ def load_config(path: str | Path, *, group_settings: dict) -> dict:
     }
     if set(config) - expected:
         raise ValueError("Unknown Super-Agent config fields")
-    # Legacy rooms/platform_id in this file are ignored, never a fallback.
+    # Group selection and Worker switches come only from native plugin controls.
     config.update(normalize_group_settings(group_settings))
     for key in ("inbox_db", "grant_file", "owner"):
         if not isinstance(config.get(key), str) or not config[key].strip():
@@ -119,8 +125,8 @@ def resolve_task_platform(context, config: dict):
             or not callable(getattr(platform, "detach_task_runtime", None))):
         raise ValueError("Install and enable the WeChat Hook connector v0.3 or later")
     scope = platform.get_task_scope()
-    if scope.get("version") != 2 or scope.get("draft_only") is not True:
-        raise ValueError("Task control requires a live draft-only adapter")
+    if scope.get("version") != 2:
+        raise ValueError("Update the WeChat Hook connector to v0.3 or later")
     if (scope["owner"] != config["owner"]
             or Path(config["inbox_db"]).resolve() != Path(scope["inbox_db"]).resolve()):
         raise ValueError("Task database/account must match the adapter")

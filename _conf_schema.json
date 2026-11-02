@@ -4,6 +4,18 @@
     "type": "string",
     "default": "wechat_pc_hook"
   },
+  "run_ticket_worker": {
+    "description": "自动处理排队任务",
+    "type": "bool",
+    "default": false,
+    "hint": "开启后会调用任务配置指定的模型，需要 Worker 凭据。保存后完整重启独立实例。"
+  },
+  "run_subscription_worker": {
+    "description": "自动唤醒到期跟进",
+    "type": "bool",
+    "default": false,
+    "hint": "开启后到期订阅会生成排队任务。需要调度凭据；保存后完整重启独立实例。"
+  },
   "rooms": {
     "description": "启用群 Agent 的群 ID",
     "type": "list",

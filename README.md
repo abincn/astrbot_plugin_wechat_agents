@@ -3,7 +3,8 @@
 独立的 AstrBot 任务插件，提供 Thread/Ticket、证据审核、单次订阅、无工具模型 Worker 和后台任务工作台。
 不注册微信平台、不连接 Hook HTTP 服务、不修改采集配置。
 
-**当前仅生成候选和草稿，不发送微信。** 页面和 Worker 需要同时安装
+**任务页面和 Worker 只生成候选和草稿，不直接发送微信。** 连接器的普通聊天发送可单独开启，
+但不会自动发送任务候选或历史草稿。页面和 Worker 需要同时安装
 [微信 Hook 连接插件](https://github.com/abincn/astrbot_plugin_wechat_hook) v0.3.0 及以上。
 本地 CLI 可以单独管理已有 Inbox，不需要加载 AstrBot 或连接插件。
 
@@ -29,6 +30,7 @@ https://github.com/abincn/astrbot_plugin_wechat_agents
 
 - `platform_id`：所用微信连接平台的 ID，默认 `wechat_pc_hook`。
 - `rooms`：启用群 Agent 的群 ID 列表，每项一个完整的 `群ID@chatroom`。
+- “自动处理排队任务”和“自动唤醒到期跟进”：均使用布尔开关，默认关闭，不再手填 true/false。
 
 这是群 Agent 的唯一启用名单，默认空列表表示不启用任何群 Agent；字符串不会被当作数组接受。
 名单内应用按群文档、空工具策略，并允许在授权范围内管理任务；名单外不应用 Agent 策略，仍按 AstrBot 原生规则处理。
@@ -42,15 +44,13 @@ https://github.com/abincn/astrbot_plugin_wechat_agents
   "inbox_db": "wechat_hook_inbox.sqlite3",
   "grant_file": "wga-superagent-grants.json",
   "owner": "YOUR_WXID",
-  "provider_id": "YOUR_PROVIDER_ID",
-  "run_ticket_worker": false,
-  "run_subscription_worker": false
+  "provider_id": "YOUR_PROVIDER_ID"
 }
 ```
 
 路径相对于这份配置文件。数据库和账户必须与所选连接平台一致；群名单和平台 ID 从 Agent 原生配置读取，
-平台保持 `send_enabled=false`。两个 Worker 默认关闭，避免仅安装插件就自动调用模型。
-要处理排队 Ticket 或到期订阅，分别把对应标志改为 `true`，并配置下面的凭据。
+连接器是否允许普通回复真实发送由其平台开关控制，不影响本工作台“保存草稿”的语义。
+两个 Worker 默认关闭；要处理排队 Ticket 或到期订阅，在本插件配置页打开对应开关，并配置下面的凭据。
 
 ### 凭据与权限
 
@@ -130,8 +130,9 @@ CLI 也读取 Agent 原生配置，默认文件为任务配置同级的
 
 ### v0.2.0 升级
 
-同时更新两个插件，再把原群 ID 列表填入 Agent 原生配置的 `rooms`。旧任务 JSON 中的 `rooms` 和 `platform_id`
-可删除；保留时也会被忽略，不会覆盖原生插件配置。现有 Inbox、grant、任务记录和按群文档目录不移动。
+同时更新两个插件，再把原群 ID 列表填入 Agent 原生配置的 `rooms`，并用控件重新选择两个 Worker 开关。
+旧任务 JSON 中的 `rooms`、`platform_id`、`run_ticket_worker` 和 `run_subscription_worker` 可删除；
+保留时也会被忽略，不会覆盖原生插件配置。现有 Inbox、grant、任务记录和按群文档目录不移动。
 连接器不再读取按群文档，Agent 沿用 `data/wechat_hook_workspaces/` 下的原命名空间。
 
 ## 打包与限制
