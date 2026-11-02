@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>微信任务工作台</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="heading">
+    <div><h1>微信任务工作台</h1><p>把群里的问题，推进到有依据的处理结果。</p></div>
+    <span class="draft-mode"><span aria-hidden="true">●</span> 仅保存草稿</span>
+  </header>
+
+  <section id="access" class="access" aria-labelledby="access-title">
+    <div><h2 id="access-title">连接任务工作区</h2><p>使用已有操作者凭据。凭据仅保留在当前页面，刷新后需重新填写。</p></div>
+    <form id="connect-form">
+      <label for="credential">操作凭据</label>
+      <div class="connect-controls"><input id="credential" type="password" autocomplete="off" spellcheck="false" required minlength="32" maxlength="512" placeholder="粘贴操作者凭据"><button type="submit" class="primary">连接工作区</button></div>
+    </form>
+  </section>
+
+  <div id="scope" class="scope" hidden>
+    <div class="identity"><span class="avatar" aria-hidden="true">微</span><div><strong id="subject"></strong><span id="account"></span></div></div>
+    <label class="room-label" for="room">当前群<select id="room"></select></label>
+    <button id="refresh" type="button">刷新</button><button id="disconnect" type="button" class="quiet">断开</button>
+  </div>
+
+  <div id="notice" class="notice" role="status" aria-live="polite">正在连接 AstrBot 页面接口…</div>
+
+  <nav class="tabs" aria-label="任务工作区">
+    <button type="button" data-tab="messages" aria-current="page">消息建单 <span id="messages-count">—</span></button>
+    <button type="button" data-tab="tasks">任务与审核 <span id="tasks-count">—</span></button>
+    <button type="button" data-tab="subscriptions">定时跟进 <span id="subscriptions-count">—</span></button>
+  </nav>
+
+  <main class="workspace" aria-busy="false">
+    <section class="collection" aria-labelledby="list-title">
+      <div class="section-title"><div><h2 id="list-title">群消息</h2><p id="list-description">选择一条已有文本消息，明确本次处理目标。</p></div><span id="updated" class="subtle"></span></div>
+      <label class="search-label"><span class="sr-only">筛选当前列表</span><input id="search" type="search" placeholder="搜索当前列表"></label>
+      <div id="list" class="item-list"><div class="empty"><span class="empty-symbol" aria-hidden="true">◎</span><h3>先连接，再开始处理</h3><p>连接后可查看授权群的已有消息、任务和定时跟进。</p></div></div>
+      <p class="list-footnote">显示最近的记录；刷新可查看最新处理状态。</p>
+    </section>
+    <aside id="detail" class="detail" aria-label="所选记录详情"><div class="empty"><span class="empty-symbol" aria-hidden="true">↗</span><h3>选中一条记录</h3><p>这里显示原始内容、下一步操作和处理记录。</p></div></aside>
+  </main>
+
+  <footer>消息 → 明确目标 → 处理任务 → 证据审核 → 保存草稿</footer>
+
+  <dialog id="editor" aria-labelledby="editor-title">
+    <form id="editor-form"><div class="dialog-heading"><h2 id="editor-title"></h2><button id="close-editor" type="button" class="quiet" aria-label="关闭">×</button></div><p id="editor-description" class="subtle"></p><div id="editor-fields"></div><p id="editor-error" role="alert" class="form-error"></p><div class="dialog-actions"><button id="cancel-editor" type="button">取消</button><button id="save-editor" type="submit" class="primary">保存</button></div></form>
+  </dialog>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
