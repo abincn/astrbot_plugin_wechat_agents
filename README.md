@@ -31,7 +31,6 @@ https://github.com/abincn/astrbot_plugin_wechat_agents
 - `platform_id`：所用微信连接平台的 ID，默认 `wechat_pc_hook`。
 - `rooms`：启用群 Agent 的群 ID 列表，每项一个完整的 `群ID@chatroom`。
 - “自动处理排队任务”和“自动唤醒到期跟进”：均使用布尔开关，默认关闭，不再手填 true/false。
-- “视频抽帧分析”：布尔开关，默认开启；只在已配置群生效，需要 ffmpeg 和视觉模型。
 
 这是群 Agent 的唯一启用名单，默认空列表表示不启用任何群 Agent；字符串不会被当作数组接受。
 名单内应用按群文档、空工具策略，并允许在授权范围内管理任务；名单外不应用 Agent 策略，仍按 AstrBot 原生规则处理。
@@ -40,12 +39,14 @@ https://github.com/abincn/astrbot_plugin_wechat_agents
 
 ### 图片、视频与引用
 
-连接插件 v0.3.1 提供原生 `Image`、`Video` 与 `Reply` 消息；本插件不重复下载，也不直接调用 Hook。
-在配置群内，视频可沿用旧 Group Agents 的方式，从验证后的本地视频提取约 0、3、9 秒的最多三帧，
-经 AstrBot 原生图片输入交给模型；每次解码最多 12 秒、每帧最多 1.5 MB、画面宽度不超过 960 像素。
-这不包含音轨识别，也不能代表整段视频的全部画面。缺少 ffmpeg、解码失败或模型不支持图片时，不能承诺理解视频。
+Agent v0.3.2 将视频抽帧移交连接插件 v0.5.0 的通用媒体模块，不再受群名单约束。
+同时更新两插件，并完整重启 AstrBot；旧 Agent v0.3.1 仍有旧抽帧逻辑，不应与新版连接器混用以免重复处理。
+“视频抽帧分析”开关现在位于 **消息平台 → 微信 Hook 连接 → 编辑**，默认开启。
+旧 Agent 配置残留的 `video_frames_enabled` 字段被忽略，以连接平台设置为准。
+只安装新版连接器也可处理群聊、私聊及引用视频，不需启用群 Agent 或 Worker。
+需要 ffmpeg 和视觉模型；最多约 0、3、9 秒三帧，不分析音轨，也不代表完整视频。
 
-引用视频也可从 `Reply.chain` 读取抽帧；输入引用消息不等于支持发回微信时的原生引用。
+连接插件也从 `Reply.chain` 读取引用视频；输入引用消息不等于支持发回微信时的原生引用。
 完整对照见 [消息能力表](https://github.com/abincn/astrbot_plugin_wechat_hook/blob/main/docs/MESSAGE_CAPABILITIES.md)。
 本次没有运行 ffmpeg 或真实模型来做实机验证。
 

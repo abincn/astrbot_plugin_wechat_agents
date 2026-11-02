@@ -1,6 +1,6 @@
 name: astrbot_plugin_wechat_agents
 display_name: 微信 Agent 任务
 desc: Optional scoped Thread, Ticket, evidence review and Subscription workers, with a native AstrBot task workbench. Requires the WeChat Hook connector for live operation. Draft-only.
-version: 0.3.1
+version: 0.3.2
 author: abincn
 repo: https://github.com/abincn/astrbot_plugin_wechat_agents
