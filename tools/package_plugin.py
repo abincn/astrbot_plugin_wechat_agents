@@ -12,6 +12,7 @@ FILES = [
     "__init__.py",
     "_conf_schema.json",
     "workspace.py",
+    "video_frames.py",
     "control_auth.py",
     "control_subscriptions.py",
     "control_tasks.py",

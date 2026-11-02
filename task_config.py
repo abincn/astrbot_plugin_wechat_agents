@@ -38,8 +38,9 @@ def normalize_group_settings(settings: dict) -> dict:
             raise ValueError("Duplicate Agent room")
         normalized.append(room)
     result = {"platform_id": platform_id.strip(), "rooms": normalized}
-    for flag in ("run_ticket_worker", "run_subscription_worker"):
-        value = settings.get(flag, False)
+    for flag, default in (("run_ticket_worker", False), ("run_subscription_worker", False),
+                          ("video_frames_enabled", True)):
+        value = settings.get(flag, default)
         if type(value) is not bool:
             raise ValueError(f"{flag} must be a boolean switch")
         result[flag] = value

@@ -16,6 +16,12 @@
     "default": false,
     "hint": "开启后到期订阅会生成排队任务。需要调度凭据；保存后完整重启独立实例。"
   },
+  "video_frames_enabled": {
+    "description": "视频抽帧分析",
+    "type": "bool",
+    "default": true,
+    "hint": "仅对启用的群生效。需要本机 ffmpeg 和支持图片的模型；最多取约 0、3、9 秒的三帧，不分析音轨。"
+  },
   "rooms": {
     "description": "启用群 Agent 的群 ID",
     "type": "list",
